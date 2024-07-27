@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import docker
+import os
 
 app = FastAPI()
 
@@ -14,13 +15,10 @@ client = docker.from_env()
 async def deploy(data: DeployData):
     try:
         image_name = ""
-        if 'type' in data.env_vars:
-            if data.env_vars['type'] == 'streaming':
+        if data.env_vars['STREAMING'] == True and data.env_vars['TYPE'] == "WORKFLOW":
                 image_name = "agifm/multi_bot"
-            else:
-                image_name = "agifm/matrix_chatgpt_bot"
         else:
-            raise HTTPException(status_code=400, detail="env_vars must contain 'type'")
+                image_name = "agifm/matrix_chatgpt_bot"
 
         container_name = data.username
 
@@ -32,11 +30,26 @@ async def deploy(data: DeployData):
         except docker.errors.NotFound:
             pass
 
-        # Create and start the new container
+        # Define the volume source path and ensure the directory exists
+        base_source_path = "/home/azureuser/app/keys"
+        user_source_path = os.path.join(base_source_path, data.username)
+        if not os.path.exists(user_source_path):
+            os.makedirs(user_source_path)
+
+        # Define the volume mapping
+        volume_mapping = {
+            user_source_path: {
+                "bind": "/app/keys",
+                "mode": "rw"
+            }
+        }
+
+        # Create and start the new container with volume attached
         container = client.containers.run(
             image_name,
             name=container_name,
             environment=data.env_vars,
+            volumes=volume_mapping,
             detach=True
         )
 
