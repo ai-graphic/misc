@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  smtp_container:
+    image: agifm/smtp
+    container_name: smtp
+    ports:
+      - "8078:1025"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.Content-Security-Policy=frame-ancestors 'self' pixx.co *.pixx.co"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.Permission-Policy=interest-cohort=()"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.Access-Control-Allow-Origin=*"
+      - "traefik.http.middlewares.smtp-add-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
+      - "traefik.http.routers.smtp.entrypoints=web-secure"
+      - "traefik.http.routers.smtp.middlewares=smtp-add-headers"
+      - "traefik.http.routers.smtp.rule=Host(`smtp.pixx.co`)"
+      - "traefik.http.routers.smtp.service=smtp"
+      - "traefik.http.routers.smtp.tls=true"
+      - "traefik.http.routers.smtp.tls.certresolver=default"
+      - "traefik.http.services.smtp.loadbalancer.server.port=1025"
+
+networks:
+  traefik:
+    external:
+      name: traefik
